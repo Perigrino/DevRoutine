@@ -1,0 +1,6 @@
+@DevRoutine.Api_HostAddress = http://localhost:5040
+
+GET {{DevRoutine.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

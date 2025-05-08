@@ -1,0 +1,40 @@
+name: Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+
+env:
+  DOTNET_VERSION: "9.x"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Verify files (debug)
+        run: |
+          pwd
+          ls -la
+          ls -la DevRoutine/
+
+      - name: Restore
+        run: dotnet restore DevRoutine.sln
+
+      - name: Build
+        run: dotnet build DevRoutine.sln --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test DevRoutine.sln --configuration Release --no-restore --no-build
+
+      - name: Publish
+        run: dotnet publish DevRoutine.sln --configuration Release --no-restore --no-build
