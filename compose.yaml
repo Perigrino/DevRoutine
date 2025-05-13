@@ -5,8 +5,8 @@
       context: .
       dockerfile: DevRoutine/DevRoutine.Api/Dockerfile
     ports:
-      - 5010:8080
-      - 5011:8081
+      - "5010:8080"
+      - "5011:8081"
     environment:
       # Seq
       # - OTEL_EXPORTER_OTLP_ENDPOINT=http://devroutine.seq:5341/ingest/otlp
@@ -24,7 +24,7 @@
     volumes:
       - ./.containers/postgres_data:/var/lib/postgresql/data
     ports:
-      - 5432:5432
+      - "5432:5432"
   
   
   devroutine.seq:
@@ -34,12 +34,12 @@
     volumes:
       - ./.containers/seq_data:/data
     ports:
-      - 8080:80
-      - 5341:5341
+      - "8080:80"
+      - "5341:5341"
 
   devroutine.aspire-dashboard:
     image: mcr.microsoft.com/dotnet/aspire-dashboard:9.0
     environment:
       DOTNET_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS: true
     ports:
-      - 18888:18888
+      - "18888:18888"

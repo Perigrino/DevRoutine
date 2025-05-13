@@ -5,27 +5,27 @@ public sealed class Routine
     public string Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
-    public HabitType Type { get; set; }
+    public RoutineType Type { get; set; }
     public Frequency Frequency { get; set; }
     public Target Target { get; set; }
-    public HabitStatus Status { get; set; }
+    public RoutineStatus Status { get; set; }
     public bool IsArchived { get; set; }
     public DateOnly? EndDate { get; set; }
     public Milestone? Milestone { get; set; }
-    public DateTime CreatedAtUtc { get; set; }
-    public DateTime? UpdatedAtUtc { get; set; }
-    public DateTime? LastCompletedAtUtc { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
+    public DateTime? LastCompletedAt { get; set; }
     
 }
 
-public enum HabitType
+public enum RoutineType
 {
     None = 0,
     Binary = 1,
     Measurable = 2
 }
 
-public enum HabitStatus
+public enum RoutineStatus
 {
     None = 0,
     Ongoing = 1,
