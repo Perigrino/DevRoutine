@@ -70,5 +70,29 @@ public static class RoutineMappings
         };
         return routine;
     }
+
+    public static void UpdateFromDto(this Routine routine, UpdateRoutineDto dto)
+    {
+        routine.Name = dto.Name;
+        routine.Description = dto.Description;
+        routine.Type = dto.Type;
+        routine.EndDate = dto.EndDate;
+        routine.UpdatedAt = DateTime.UtcNow;
+        routine.Frequency = new Frequency
+        {
+            Type = dto.Frequency.Type,
+            TimesPerPeriod = dto.Frequency.TimesPerPeriod
+        };
+        routine.Target = new Target
+        {
+            Value = dto.Target.Value,
+            Unit = dto.Target.Unit
+        };
+        if (dto.Milestone != null)
+        {
+            routine.Milestone ??= new Milestone(); // Create new milestone if it doesn't exist
+            routine.Milestone.Target = dto.Milestone.Target;
+        }
+    }
     
 }
