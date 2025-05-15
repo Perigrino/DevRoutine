@@ -15,6 +15,8 @@ public sealed class Routine
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
     public DateTime? LastCompletedAt { get; set; }
+    public List<RoutineTag> RoutineTags { get; set; }
+    public List<Tag> Tags { get; set; }
     
 }
 

@@ -69,7 +69,7 @@ public static class RoutineMappings
             CreatedAt = DateTime.UtcNow,
         };
         return routine;
-    }
+    } // Convert DTO to Entity
 
     public static void UpdateFromDto(this Routine routine, UpdateRoutineDto dto)
     {

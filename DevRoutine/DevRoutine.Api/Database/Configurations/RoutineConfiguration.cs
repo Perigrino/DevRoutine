@@ -23,5 +23,10 @@ public sealed class HabitConfiguration : IEntityTypeConfiguration<Routine>
         });
         builder.OwnsOne(h => h.Milestone);
         
+        //Configure skip navigation prop for RoutineTags
+        builder.HasMany(h => h.Tags)
+            .WithMany()
+            .UsingEntity<RoutineTag>();
+        
     }
 }

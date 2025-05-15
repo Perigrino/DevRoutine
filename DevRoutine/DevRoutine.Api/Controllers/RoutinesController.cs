@@ -29,11 +29,11 @@ public sealed class RoutinesController(ApplicationDbContext dbContext) : Control
     
     //GET api/<RoutineController>/5
     [HttpGet("{id}")]
-    public async Task<ActionResult<RoutinesDto>> GetRoutine(string id)
+    public async Task<ActionResult<RoutineWithTagssDto>> GetRoutine(string id)
     {
-        RoutinesDto? routine = await dbContext.Routines
+        RoutineWithTagssDto? routine = await dbContext.Routines
             .Where(r => r.Id ==id)
-            .Select(RoutineQueries.ProjectToDto())
+            .Select(RoutineQueries.ProjectToDtoWithTags())
             .FirstOrDefaultAsync();
         if (routine is null)
         {
@@ -46,10 +46,10 @@ public sealed class RoutinesController(ApplicationDbContext dbContext) : Control
     [HttpPost]
     public async Task<ActionResult<RoutinesDto>> CreateRoutine(CreateRoutineDto createRoutine)
     {
-        Routine routine = createRoutine.ToEntity();
+        Routine routine = createRoutine.ToEntity(); // Convert DTO to Entity
         dbContext.Add(routine);
         await dbContext.SaveChangesAsync();
-        RoutinesDto routinesDto = routine.ToDto();
+        RoutinesDto routinesDto = routine.ToDto(); // Convert Entity to DTO
         return CreatedAtAction(nameof(GetRoutine), new { id = routine.Id }, routinesDto);
     }
     
@@ -76,7 +76,7 @@ public sealed class RoutinesController(ApplicationDbContext dbContext) : Control
         {
             return NotFound();
         }
-        RoutinesDto routineDto = routine.ToDto();
+        RoutinesDto routineDto = routine.ToDto(); // Convert Entity to DTO
         patchDocument.ApplyTo(routineDto, ModelState);
         if (!TryValidateModel(routineDto))
         {
@@ -102,4 +102,6 @@ public sealed class RoutinesController(ApplicationDbContext dbContext) : Control
         await dbContext.SaveChangesAsync();
         return NoContent();
     }
+    
+    
 }
