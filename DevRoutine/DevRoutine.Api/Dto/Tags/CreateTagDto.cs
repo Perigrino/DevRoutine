@@ -1,3 +1,5 @@
+using FluentValidation;
+
 namespace DevRoutine.Api.Dto.Tags;
 
 public sealed record CreateTagDto

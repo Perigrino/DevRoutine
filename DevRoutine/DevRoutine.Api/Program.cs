@@ -1,6 +1,7 @@
 using DevRoutine.Api.Database;
 using DevRoutine.Api.Database.Configurations;
 using DevRoutine.Api.Extensions;
+using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql;
@@ -14,6 +15,15 @@ WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers(options => { options.ReturnHttpNotAcceptable = true; })
     .AddNewtonsoftJson();
     //.AddXmlSerializerFormatters();
+
+builder.Services.AddValidatorsFromAssemblyContaining<Program>();
+builder.Services.AddProblemDetails(options =>
+{
+    options.CustomizeProblemDetails = context =>
+    {
+        context.ProblemDetails.Extensions.TryAdd("requestId", context.HttpContext.TraceIdentifier);
+    };
+});
 
 builder.Services.AddOpenApi();
 

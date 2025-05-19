@@ -2,6 +2,8 @@ using System.Linq.Expressions;
 using DevRoutine.Api.Database;
 using DevRoutine.Api.Dto.Routines;
 using DevRoutine.Api.Entities;
+using FluentValidation;
+using FluentValidation.Results;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -44,9 +46,14 @@ public sealed class RoutinesController(ApplicationDbContext dbContext) : Control
     
     // POST api/<RoutineController>
     [HttpPost]
-    public async Task<ActionResult<RoutinesDto>> CreateRoutine(CreateRoutineDto createRoutine)
+    public async Task<ActionResult<RoutinesDto>> CreateRoutine(CreateRoutineDto createRoutineDto, IValidator<CreateRoutineDto> validator)
     {
-        Routine routine = createRoutine.ToEntity(); // Convert DTO to Entity
+        ValidationResult validationResult = await validator.ValidateAsync(createRoutineDto);
+        if (!validationResult.IsValid)
+        {
+            return BadRequest(validationResult.ToDictionary());
+        }
+        Routine routine = createRoutineDto.ToEntity(); // Convert DTO to Entity
         dbContext.Add(routine);
         await dbContext.SaveChangesAsync();
         RoutinesDto routinesDto = routine.ToDto(); // Convert Entity to DTO
