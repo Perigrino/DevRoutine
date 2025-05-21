@@ -48,10 +48,13 @@ public sealed class RoutinesController(ApplicationDbContext dbContext) : Control
     [HttpPost]
     public async Task<ActionResult<RoutinesDto>> CreateRoutine(CreateRoutineDto createRoutineDto, IValidator<CreateRoutineDto> validator)
     {
-        ValidationResult validationResult = await validator.ValidateAsync(createRoutineDto);
-        if (!validationResult.IsValid)
+        
+        await validator.ValidateAndThrowAsync(createRoutineDto);
+        if (await dbContext.Routines.AnyAsync(r => r.Name == createRoutineDto.Name))
         {
-            return BadRequest(validationResult.ToDictionary());
+            return Problem(
+                detail: $"The tag with name '{createRoutineDto.Name}' already exists",
+                statusCode: StatusCodes.Status409Conflict);
         }
         Routine routine = createRoutineDto.ToEntity(); // Convert DTO to Entity
         dbContext.Add(routine);

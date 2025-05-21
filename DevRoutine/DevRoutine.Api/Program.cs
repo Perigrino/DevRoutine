@@ -1,6 +1,7 @@
 using DevRoutine.Api.Database;
 using DevRoutine.Api.Database.Configurations;
 using DevRoutine.Api.Extensions;
+using DevRoutine.Api.Middleware;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Migrations;
@@ -17,6 +18,7 @@ builder.Services.AddControllers(options => { options.ReturnHttpNotAcceptable = t
     //.AddXmlSerializerFormatters();
 
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
+
 builder.Services.AddProblemDetails(options =>
 {
     options.CustomizeProblemDetails = context =>
@@ -25,6 +27,8 @@ builder.Services.AddProblemDetails(options =>
     };
 });
 
+builder.Services.AddExceptionHandler<ValidationExceptionHandler>();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddOpenApi();
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -60,6 +64,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseExceptionHandler();
 
 app.MapControllers();
 
