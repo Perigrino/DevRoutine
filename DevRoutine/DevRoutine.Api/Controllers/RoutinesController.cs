@@ -49,13 +49,9 @@ public sealed class RoutinesController(ApplicationDbContext dbContext) : Control
     public async Task<ActionResult<RoutinesDto>> CreateRoutine(CreateRoutineDto createRoutineDto, IValidator<CreateRoutineDto> validator)
     {
         
+        // Validate the CreateRoutineDto object and throw an exception if validation fails
         await validator.ValidateAndThrowAsync(createRoutineDto);
-        if (await dbContext.Routines.AnyAsync(r => r.Name == createRoutineDto.Name))
-        {
-            return Problem(
-                detail: $"The tag with name '{createRoutineDto.Name}' already exists",
-                statusCode: StatusCodes.Status409Conflict);
-        }
+        
         Routine routine = createRoutineDto.ToEntity(); // Convert DTO to Entity
         dbContext.Add(routine);
         await dbContext.SaveChangesAsync();

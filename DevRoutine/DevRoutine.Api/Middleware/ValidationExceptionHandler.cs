@@ -31,6 +31,12 @@ public sealed class ValidationExceptionHandler(IProblemDetailsService problemDet
                 g => g.Key.ToLowerInvariant(),
                 g => g.Select(e => e.ErrorMessage).ToArray()
             );
+        
+        // Check for duplicate-related errors
+        if (errors.Values.Any(messages => messages.Any(msg => msg.Contains("already exists", StringComparison.OrdinalIgnoreCase))))
+        {
+            context.ProblemDetails.Detail = "Duplicate entry detected";
+        }
         context.ProblemDetails.Extensions.Add("errors", errors);
 
         return await problemDetailsService.TryWriteAsync(context);

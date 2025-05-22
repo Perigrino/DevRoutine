@@ -1,5 +1,7 @@
+using DevRoutine.Api.Database;
 using DevRoutine.Api.Entities;
 using FluentValidation;
+using Microsoft.EntityFrameworkCore;
 
 namespace DevRoutine.Api.Dto.Routines;
 
@@ -12,13 +14,18 @@ public sealed class CreateRoutineDtoValidator : AbstractValidator<CreateRoutineD
     ];
     private static readonly string[] AllowedUnitsForBinaryHabits = ["sessions", "tasks"];
 
-    public CreateRoutineDtoValidator()
+    public CreateRoutineDtoValidator(ApplicationDbContext applicationDbContext)
     {
+        ApplicationDbContext dbContext = applicationDbContext;
+
         RuleFor(x => x.Name)
             .NotEmpty()
             .MinimumLength(3)
             .MaximumLength(100)
-            .WithMessage("Habit name must be between 3 and 100 characters");
+            .WithMessage("Habit name must be between 3 and 100 characters")
+            .MustAsync(async (name, cancellationToken) => 
+                !await dbContext.Routines.AnyAsync(r => r.Name == name, cancellationToken))
+            .WithMessage("A routine with the same name already exists");
 
         RuleFor(x => x.Description)
             .MaximumLength(500)
@@ -65,8 +72,10 @@ public sealed class CreateRoutineDtoValidator : AbstractValidator<CreateRoutineD
         RuleFor(x => x.Target.Unit)
             .Must((dto, unit) => IsTargetUnitCompatibleWithType(dto.Type, unit))
             .WithMessage("Target unit is not compatible with the habit type");
+        
     }
-
+    
+    
     private static bool IsTargetUnitCompatibleWithType(RoutineType type, string unit)
     {
         string normalizedUnit = unit.ToLowerInvariant();

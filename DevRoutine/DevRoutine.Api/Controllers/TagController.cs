@@ -52,16 +52,9 @@ public sealed class TagsController(ApplicationDbContext dbContext) : ControllerB
     public async Task<ActionResult<TagDto>> CreateTag(
         CreateTagDto createTagDto, IValidator<CreateTagDto> validator)
     {
-        await validator.ValidateAsync(createTagDto);
+        await validator.ValidateAndThrowAsync(createTagDto);
         
         Tag tag = createTagDto.ToEntity(); // Convert DTO to Entity
-        if (await dbContext.Tags.AnyAsync(r => r.Name == createTagDto.Name))
-        {
-            return Problem(
-                detail: $"The tag with name '{createTagDto.Name}' already exists",
-                statusCode: StatusCodes.Status409Conflict);
-        }
-
         dbContext.Add(tag);
         await dbContext.SaveChangesAsync();
         TagDto tagDto = tag.ToDto(); // Convert Entity to DTO
