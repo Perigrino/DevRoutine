@@ -1,7 +1,10 @@
 using DevRoutine.Api.Database;
 using DevRoutine.Api.Database.Configurations;
+using DevRoutine.Api.Dto.Routines;
+using DevRoutine.Api.Entities;
 using DevRoutine.Api.Extensions;
 using DevRoutine.Api.Middleware;
+using DevRoutine.Api.Services.Sorting;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Migrations;
@@ -54,6 +57,8 @@ builder.Logging.AddOpenTelemetry(options =>
     options.IncludeFormattedMessage = true;
 });
 
+builder.Services.AddTransient<SortMappingProvider>();
+builder.Services.AddSingleton<ISortMappingDefinition, SortMappingDefinition<RoutinesDto, Routine>>(_ =>RoutineMappings.SortMapping);
 WebApplication app = builder.Build();
 
 // Configure the HTTP request pipeline.

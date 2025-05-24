@@ -1,4 +1,4 @@
-using System.Linq.Expressions;
+using System.Linq.Dynamic.Core;
 using DevRoutine.Api.Database;
 using DevRoutine.Api.Dto.Routines;
 using DevRoutine.Api.Entities;
@@ -16,9 +16,16 @@ public sealed class RoutinesController(ApplicationDbContext dbContext) : Control
 {
     //GET api/<RoutineController>
     [HttpGet]
-    public async Task<ActionResult<RoutineDtoCollection>> GetRoutines()
+    public async Task<ActionResult<RoutineDtoCollection>> GetRoutines([FromQuery] RoutinesQueryParameters query)
     {
+        query.Search = query.Search?.Trim().ToLower();
         List<RoutinesDto> routines = await dbContext.Routines
+            .Where(r => query.Search == null ||
+                        r.Name.ToLower().Contains(query.Search) ||
+                        r.Description != null && r.Description.ToLower().Contains(query.Search))
+            .Where(r =>query.Type == null || r.Type == query.Type)
+            .Where(r => query.Status == null || r.Status == query.Status)
+            .OrderBy("Name ASC, Description DESC, EndDate DESC") // Default sorting
             .Select(RoutineQueries.ProjectToDto()
             ).ToListAsync();
 

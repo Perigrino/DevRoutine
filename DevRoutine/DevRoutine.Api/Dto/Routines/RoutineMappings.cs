@@ -1,10 +1,38 @@
 using System.Linq.Expressions;
 using DevRoutine.Api.Entities;
+using DevRoutine.Api.Services.Sorting;
 
 namespace DevRoutine.Api.Dto.Routines;
 
-public static class RoutineMappings 
+internal static class RoutineMappings
 {
+    public static readonly SortMappingDefinition<RoutinesDto, Routine> SortMapping = new()
+    {
+        Mappings =
+        [
+            new SortMapping(nameof(RoutinesDto.Name), nameof(Routine.Name)),
+            new SortMapping(nameof(RoutinesDto.Description), nameof(Routine.Description)),
+            new SortMapping(nameof(RoutinesDto.Type), nameof(Routine.Type)),
+            new SortMapping(
+                $"{nameof(RoutinesDto.Frequency)}.{nameof(FrequencyDto.Type)}",
+                $"{nameof(Routine.Frequency)}.{nameof(Frequency.Type)}"),
+            new SortMapping(
+                $"{nameof(RoutinesDto.Frequency)}.{nameof(FrequencyDto.TimesPerPeriod)}",
+                $"{nameof(Routine.Frequency)}.{nameof(Frequency.TimesPerPeriod)}"),
+            new SortMapping(
+                $"{nameof(RoutinesDto.Target)}.{nameof(TargetDto.Value)}",
+                $"{nameof(Routine.Target)}.{nameof(Target.Value)}"),
+            new SortMapping(
+                $"{nameof(RoutinesDto.Target)}.{nameof(TargetDto.Unit)}",
+                $"{nameof(Routine.Target)}.{nameof(Target.Unit)}"),
+            new SortMapping(nameof(RoutinesDto.Status), nameof(Routine.Status)),
+            new SortMapping(nameof(RoutinesDto.EndDate), nameof(Routine.EndDate)),
+            new SortMapping(nameof(RoutinesDto.CreatedAt), nameof(Routine.CreatedAt)),
+            new SortMapping(nameof(RoutinesDto.UpdatedAt), nameof(Routine.UpdatedAt)),
+            new SortMapping(nameof(RoutinesDto.LastCompletedAt), nameof(Routine.LastCompletedAt))
+        ]
+    };
+
     public static RoutinesDto ToDto(this Routine routine)
     {
         return new RoutinesDto
