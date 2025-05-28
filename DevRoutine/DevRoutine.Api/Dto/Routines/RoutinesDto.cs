@@ -1,13 +1,7 @@
+using DevRoutine.Api.Dto.Common;
 using DevRoutine.Api.Entities;
 
 namespace DevRoutine.Api.Dto.Routines;
-
-
-public sealed record RoutineCollectionDto
-{
-    public List<RoutinesDto> Data { get; set; }
-}
-
 public sealed record RoutinesDto
 {
     public required string Id { get; init; }

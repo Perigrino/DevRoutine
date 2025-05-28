@@ -1,7 +1,9 @@
+using System.Dynamic;
 using System.Linq.Dynamic.Core;
 using DevRoutine.Api.Database;
 using DevRoutine.Api.Dto.Routines;
 using DevRoutine.Api.Entities;
+using DevRoutine.Api.Migrations.Application;
 using DevRoutine.Api.Services.Sorting;
 using FluentValidation;
 using FluentValidation.Results;
@@ -17,30 +19,34 @@ public sealed class RoutinesController(ApplicationDbContext dbContext) : Control
 {
     //GET api/<RoutineController>
     [HttpGet]
-    public async Task<ActionResult<RoutineCollectionDto>> GetRoutines([FromQuery] RoutinesQueryParameters query,
+    public async Task<ActionResult<PaginationResult<RoutinesDto>>> GetRoutines([FromQuery] RoutinesQueryParameters query,
         SortMappingProvider sortMappingProvider)
     {
-        query.Search = query.Search?.Trim().ToLower();
-        
+        if (!sortMappingProvider.ValidateMappings<RoutinesDto, Routine>(query.Sort))
+        {
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                detail: $"The provided sort parameter isn't valid: '{query.Sort}'");
+        }
+
+        query.Search ??= query.Search?.Trim().ToLower();
+
         SortMapping[] sortMappings = sortMappingProvider.GetMappings<RoutinesDto, Routine>();
-        
-        List<RoutinesDto> routines = await dbContext.Routines
+
+        IQueryable<RoutinesDto> routinesQuery = dbContext.Routines
             .Where(r => query.Search == null ||
                         r.Name.ToLower().Contains(query.Search) ||
                         r.Description != null && r.Description.ToLower().Contains(query.Search))
-            .Where(r =>query.Type == null || r.Type == query.Type)
+            .Where(r => query.Type == null || r.Type == query.Type)
             .Where(r => query.Status == null || r.Status == query.Status)
             .ApplySort(query.Sort, sortMappings)
-            .Select(RoutineQueries.ProjectToDto())// Default sorting
-            .ToListAsync();
-
-        var routineCollectionDtoDto = new RoutineCollectionDto
-        {
-            Data = routines
-        };
-        return Ok(routineCollectionDtoDto);
+            .Select(RoutineQueries.ProjectToDto());
+        
+        var paginationResult = await PaginationResult<RoutinesDto>.CreateAsync(routinesQuery, query.Page, query.PageSize);
+        
+        return Ok(paginationResult);
     }
-    
+
     //GET api/<RoutineController>/5
     [HttpGet("{id}")]
     public async Task<ActionResult<RoutineWithTagssDto>> GetRoutine(string id)
