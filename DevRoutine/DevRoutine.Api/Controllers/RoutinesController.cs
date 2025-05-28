@@ -2,6 +2,7 @@ using System.Linq.Dynamic.Core;
 using DevRoutine.Api.Database;
 using DevRoutine.Api.Dto.Routines;
 using DevRoutine.Api.Entities;
+using DevRoutine.Api.Services.Sorting;
 using FluentValidation;
 using FluentValidation.Results;
 using Microsoft.AspNetCore.JsonPatch;
@@ -16,20 +17,24 @@ public sealed class RoutinesController(ApplicationDbContext dbContext) : Control
 {
     //GET api/<RoutineController>
     [HttpGet]
-    public async Task<ActionResult<RoutineDtoCollection>> GetRoutines([FromQuery] RoutinesQueryParameters query)
+    public async Task<ActionResult<RoutineCollectionDto>> GetRoutines([FromQuery] RoutinesQueryParameters query,
+        SortMappingProvider sortMappingProvider)
     {
         query.Search = query.Search?.Trim().ToLower();
+        
+        SortMapping[] sortMappings = sortMappingProvider.GetMappings<RoutinesDto, Routine>();
+        
         List<RoutinesDto> routines = await dbContext.Routines
             .Where(r => query.Search == null ||
                         r.Name.ToLower().Contains(query.Search) ||
                         r.Description != null && r.Description.ToLower().Contains(query.Search))
             .Where(r =>query.Type == null || r.Type == query.Type)
             .Where(r => query.Status == null || r.Status == query.Status)
-            .OrderBy("Name ASC, Description DESC, EndDate DESC") // Default sorting
-            .Select(RoutineQueries.ProjectToDto()
-            ).ToListAsync();
+            .ApplySort(query.Sort, sortMappings)
+            .Select(RoutineQueries.ProjectToDto())// Default sorting
+            .ToListAsync();
 
-        var routineCollectionDtoDto = new RoutineDtoCollection
+        var routineCollectionDtoDto = new RoutineCollectionDto
         {
             Data = routines
         };

@@ -3,7 +3,7 @@ using DevRoutine.Api.Entities;
 namespace DevRoutine.Api.Dto.Routines;
 
 
-public sealed record RoutineDtoCollection
+public sealed record RoutineCollectionDto
 {
     public List<RoutinesDto> Data { get; set; }
 }
