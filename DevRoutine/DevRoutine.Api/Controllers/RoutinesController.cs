@@ -4,6 +4,7 @@ using DevRoutine.Api.Database;
 using DevRoutine.Api.Dto.Routines;
 using DevRoutine.Api.Entities;
 using DevRoutine.Api.Migrations.Application;
+using DevRoutine.Api.Services;
 using DevRoutine.Api.Services.Sorting;
 using FluentValidation;
 using FluentValidation.Results;
@@ -17,22 +18,36 @@ namespace DevRoutine.Api.Controllers;
 
 public sealed class RoutinesController(ApplicationDbContext dbContext) : ControllerBase
 {
+    // This method retrieves a list of routines based on query parameters such as sorting, filtering, and pagination.
+    // It also validates the provided sort and data shaping fields, applies sorting, and shapes the data before returning it.
     //GET api/<RoutineController>
     [HttpGet]
-    public async Task<ActionResult<PaginationResult<RoutinesDto>>> GetRoutines([FromQuery] RoutinesQueryParameters query,
-        SortMappingProvider sortMappingProvider)
+    public async Task<IActionResult> GetRoutines([FromQuery] RoutinesQueryParameters query,
+        SortMappingProvider sortMappingProvider, DataShapingService dataShapingService)
     {
+        // Validate the sort parameter against the sort mappings
         if (!sortMappingProvider.ValidateMappings<RoutinesDto, Routine>(query.Sort))
         {
             return Problem(
                 statusCode: StatusCodes.Status400BadRequest,
                 detail: $"The provided sort parameter isn't valid: '{query.Sort}'");
         }
+        
+        // Validate the fields parameter for data shaping
+        if (!dataShapingService.Validate<RoutinesDto>(query.Fields))
+        {
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                detail: $"The provided data shaping fields aren't valid: '{query.Fields}'");
+        }
 
+        // Trim and normalize the search query
         query.Search ??= query.Search?.Trim().ToLower();
 
+        // Retrieve the sort mappings for the DTO and entity
         SortMapping[] sortMappings = sortMappingProvider.GetMappings<RoutinesDto, Routine>();
 
+        // Build the query with filtering, sorting, and projection to DTO
         IQueryable<RoutinesDto> routinesQuery = dbContext.Routines
             .Where(r => query.Search == null ||
                         r.Name.ToLower().Contains(query.Search) ||
@@ -42,15 +57,36 @@ public sealed class RoutinesController(ApplicationDbContext dbContext) : Control
             .ApplySort(query.Sort, sortMappings)
             .Select(RoutineQueries.ProjectToDto());
         
-        var paginationResult = await PaginationResult<RoutinesDto>.CreateAsync(routinesQuery, query.Page, query.PageSize);
-        
+        // Get the total count of routines for pagination
+        int totalCount = await routinesQuery.CountAsync();
+
+        // Apply pagination to the query
+        List<RoutinesDto> routine = await routinesQuery
+            .Skip((query.Page - 1) * query.PageSize)
+            .Take(query.PageSize)
+            .ToListAsync();
+
+        // Shape the data based on the requested fields
+        var paginationResult = new PaginationResult<ExpandoObject>
+        {
+            Items = dataShapingService.ShapeCollectionData(routine, query.Fields),
+            Page = query.Page,
+            PageSize = query.PageSize,
+            TotalCount = totalCount
+        };
         return Ok(paginationResult);
     }
 
     //GET api/<RoutineController>/5
     [HttpGet("{id}")]
-    public async Task<ActionResult<RoutineWithTagssDto>> GetRoutine(string id)
+    public async Task<ActionResult<RoutineWithTagssDto>> GetRoutine(string id, string? fields, DataShapingService dataShapingService)
     {
+        if (!dataShapingService.Validate<RoutineWithTagssDto>(fields))
+        {
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                detail: $"The provided data shaping fields aren't valid: '{fields}'");
+        }
         RoutineWithTagssDto? routine = await dbContext.Routines
             .Where(r => r.Id ==id)
             .Select(RoutineQueries.ProjectToDtoWithTags())
@@ -59,7 +95,9 @@ public sealed class RoutinesController(ApplicationDbContext dbContext) : Control
         {
             return NotFound();
         }
-        return Ok(routine);
+        
+        ExpandoObject shapedRoutineDto = dataShapingService.ShapeData(routine, fields);
+        return Ok(shapedRoutineDto);
     }
     
     // POST api/<RoutineController>

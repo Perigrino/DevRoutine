@@ -2,12 +2,12 @@ using System.Collections.Concurrent;
 using System.Dynamic;
 using System.Reflection;
 
-namespace DevRoutine.Api.Dto.Routines;
+namespace DevRoutine.Api.Services;
 
 public sealed class DataShapingService
 {
     private static readonly ConcurrentDictionary<Type, PropertyInfo[]> PropertiesCache = new();
-
+    
     public ExpandoObject ShapeData<T>(T entity, string? fields)
     {
         HashSet<string> fieldsSet = fields?
@@ -38,7 +38,7 @@ public sealed class DataShapingService
 
     public List<ExpandoObject> ShapeCollectionData<T>(IEnumerable<T> entities, string? fields)
     {
-        HashSet<string> fieldsSet = fields?
+        HashSet<string> fieldsSet = fields? 
             .Split(',', StringSplitOptions.RemoveEmptyEntries)
             .Select(f => f.Trim())
             .ToHashSet(StringComparer.OrdinalIgnoreCase) ?? [];
@@ -66,7 +66,6 @@ public sealed class DataShapingService
 
             shapedObjects.Add((ExpandoObject)shapedObject);
         }
-
         return shapedObjects;
     }
 
