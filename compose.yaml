@@ -7,7 +7,7 @@
     ports:
       - "5010:8080"
       - "5011:8081"
-    environment:
+    environment: 
       # Seq
       # - OTEL_EXPORTER_OTLP_ENDPOINT=http://devroutine.seq:5341/ingest/otlp
       # - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf

@@ -11,6 +11,7 @@ namespace DevRoutine.Api.Controllers;
 [ApiController]
 public sealed class RoutineTagController(ApplicationDbContext dbContext) : ControllerBase
 {
+    public static readonly string Name = nameof(RoutineTagController).Replace("Controller", string.Empty);
     // PUT api/routines/{routineId}/tags
     // // Updates or inserts tags for a specific routine
     [HttpPut]    

@@ -2,7 +2,7 @@ using DevRoutine.Api.Dto.Common;
 using DevRoutine.Api.Entities;
 
 namespace DevRoutine.Api.Dto.Routines;
-public sealed record RoutinesDto
+public sealed record RoutinesDto : ILinkResponse
 {
     public required string Id { get; init; }
     public required string Name { get; init; }
@@ -17,6 +17,7 @@ public sealed record RoutinesDto
     public required DateTime CreatedAt { get; init; }
     public DateTime? UpdatedAt { get; init; }
     public DateTime? LastCompletedAt { get; init; }
+    public List<LinkDto> Links { get; set; }
 }
 
 public sealed record FrequencyDto

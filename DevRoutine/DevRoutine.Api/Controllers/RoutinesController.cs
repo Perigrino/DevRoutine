@@ -1,6 +1,7 @@
 using System.Dynamic;
 using System.Linq.Dynamic.Core;
 using DevRoutine.Api.Database;
+using DevRoutine.Api.Dto.Common;
 using DevRoutine.Api.Dto.Routines;
 using DevRoutine.Api.Entities;
 using DevRoutine.Api.Migrations.Application;
@@ -16,7 +17,7 @@ namespace DevRoutine.Api.Controllers;
 [ApiController]
 [Route("routines")]
 
-public sealed class RoutinesController(ApplicationDbContext dbContext) : ControllerBase
+public sealed class RoutinesController(ApplicationDbContext dbContext, LinkService linkService) : ControllerBase
 {
     // This method retrieves a list of routines based on query parameters such as sorting, filtering, and pagination.
     // It also validates the provided sort and data shaping fields, applies sorting, and shapes the data before returning it.
@@ -69,11 +70,14 @@ public sealed class RoutinesController(ApplicationDbContext dbContext) : Control
         // Shape the data based on the requested fields
         var paginationResult = new PaginationResult<ExpandoObject>
         {
-            Items = dataShapingService.ShapeCollectionData(routine, query.Fields),
+            Items = dataShapingService.ShapeCollectionData(routine, query.Fields,
+                r => CreateLinkForRoutine(r.Id, query.Fields)),
             Page = query.Page,
             PageSize = query.PageSize,
-            TotalCount = totalCount
+            TotalCount = totalCount,
         };
+        paginationResult.Links =
+            CreateLinkForRoutines(query, paginationResult.HasNextPage, paginationResult.HasPreviousPage);
         return Ok(paginationResult);
     }
 
@@ -87,6 +91,8 @@ public sealed class RoutinesController(ApplicationDbContext dbContext) : Control
                 statusCode: StatusCodes.Status400BadRequest,
                 detail: $"The provided data shaping fields aren't valid: '{fields}'");
         }
+        
+        
         RoutineWithTagssDto? routine = await dbContext.Routines
             .Where(r => r.Id ==id)
             .Select(RoutineQueries.ProjectToDtoWithTags())
@@ -97,9 +103,13 @@ public sealed class RoutinesController(ApplicationDbContext dbContext) : Control
         }
         
         ExpandoObject shapedRoutineDto = dataShapingService.ShapeData(routine, fields);
+        List<LinkDto> links = CreateLinkForRoutine(id, fields);
+        shapedRoutineDto.TryAdd("links",links);
         return Ok(shapedRoutineDto);
     }
-    
+
+
+
     // POST api/<RoutineController>
     [HttpPost]
     public async Task<ActionResult<RoutinesDto>> CreateRoutine(CreateRoutineDto createRoutineDto, IValidator<CreateRoutineDto> validator)
@@ -111,7 +121,8 @@ public sealed class RoutinesController(ApplicationDbContext dbContext) : Control
         Routine routine = createRoutineDto.ToEntity(); // Convert DTO to Entity
         dbContext.Add(routine);
         await dbContext.SaveChangesAsync();
-        RoutinesDto routinesDto = routine.ToDto(); // Convert Entity to DTO
+        RoutinesDto routinesDto = routine.ToDto();
+        routinesDto.Links = CreateLinkForRoutine(routine.Id, null);// Convert Entity to DTO
         return CreatedAtAction(nameof(GetRoutine), new { id = routine.Id }, routinesDto);
     }
     
@@ -166,4 +177,66 @@ public sealed class RoutinesController(ApplicationDbContext dbContext) : Control
     }
     
     
+    
+    
+    
+    private List<LinkDto> CreateLinkForRoutine(string id, string? fields)
+    {
+        List<LinkDto> links =
+        [
+            linkService.Create(nameof(GetRoutine), "self", HttpMethods.Get, new { id,fields }),
+            linkService.Create(nameof(GetRoutine), "update", HttpMethods.Put, new { id }),
+            linkService.Create(nameof(GetRoutine), "patch-update", HttpMethods.Patch, new { id }),
+            linkService.Create(nameof(GetRoutine), "delete", HttpMethods.Delete, new { id }),
+            linkService.Create(nameof(RoutineTagController.UpsertRoutineTags), "upsert-tags", HttpMethods.Put, 
+                new { routineId = id }, RoutineTagController.Name)
+        ];
+        return links;
+    }
+
+    private List<LinkDto> CreateLinkForRoutines(RoutinesQueryParameters parameters, bool hasNextPage, bool hasPreviousPage)
+    {
+        List<LinkDto> links =
+            [
+                linkService.Create(nameof(GetRoutines), "self", HttpMethods.Get, new
+                {
+                    q = parameters.Search,
+                    type = parameters.Type,
+                    status = parameters.Status,
+                    sort = parameters.Sort,
+                    page = parameters.Page,
+                    pageSize = parameters.PageSize,
+                    fields = parameters.Fields
+                }),
+                linkService.Create(nameof(CreateRoutine), "create", HttpMethods.Post, null)
+            ];
+        if(hasNextPage)
+        {
+            links.Add(linkService.Create(nameof(GetRoutines), "next-page", HttpMethods.Get, new
+            {
+                q = parameters.Search,
+                type = parameters.Type,
+                status = parameters.Status,
+                sort = parameters.Sort,
+                page = parameters.Page + 1,
+                pageSize = parameters.PageSize,
+                fields = parameters.Fields
+            }));
+        }
+        if (hasPreviousPage)
+        {
+            links.Add(linkService.Create(nameof(GetRoutines), "previous-page", HttpMethods.Get, new
+            {
+                q = parameters.Search,
+                type = parameters.Type,
+                status = parameters.Status,
+                sort = parameters.Sort,
+                page = parameters.Page - 1,
+                pageSize = parameters.PageSize,
+                fields = parameters.Fields
+            }));
+        }
+        
+        return links;
+    }
 }
