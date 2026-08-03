@@ -1,40 +1,37 @@
 using System.Dynamic;
-using System.Linq.Dynamic.Core;
 using DevRoutine.Api.Database;
 using DevRoutine.Api.Dto.Common;
 using DevRoutine.Api.Dto.Routines;
 using DevRoutine.Api.Entities;
-using DevRoutine.Api.Migrations.Application;
 using DevRoutine.Api.Services;
 using DevRoutine.Api.Services.Sorting;
 using FluentValidation;
-using FluentValidation.Results;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace DevRoutine.Api.Controllers;
+
 [ApiController]
 [Route("routines")]
-
-public sealed class RoutinesController(ApplicationDbContext dbContext, LinkService linkService) : ControllerBase
+public sealed class RoutinesController(
+    ApplicationDbContext dbContext,
+    LinkService linkService,
+    SortMappingProvider sortMappingProvider,
+    DataShapingService dataShapingService,
+    IValidator<CreateRoutineDto> createRoutineValidator,
+    IValidator<UpdateRoutineDto> updateRoutineValidator) : ControllerBase
 {
-    // This method retrieves a list of routines based on query parameters such as sorting, filtering, and pagination.
-    // It also validates the provided sort and data shaping fields, applies sorting, and shapes the data before returning it.
-    //GET api/<RoutineController>
     [HttpGet]
-    public async Task<IActionResult> GetRoutines([FromQuery] RoutinesQueryParameters query,
-        SortMappingProvider sortMappingProvider, DataShapingService dataShapingService)
+    public async Task<IActionResult> GetRoutines([FromQuery] RoutinesQueryParameters query, CancellationToken cancellationToken)
     {
-        // Validate the sort parameter against the sort mappings
         if (!sortMappingProvider.ValidateMappings<RoutinesDto, Routine>(query.Sort))
         {
             return Problem(
                 statusCode: StatusCodes.Status400BadRequest,
                 detail: $"The provided sort parameter isn't valid: '{query.Sort}'");
         }
-        
-        // Validate the fields parameter for data shaping
+
         if (!dataShapingService.Validate<RoutinesDto>(query.Fields))
         {
             return Problem(
@@ -42,13 +39,10 @@ public sealed class RoutinesController(ApplicationDbContext dbContext, LinkServi
                 detail: $"The provided data shaping fields aren't valid: '{query.Fields}'");
         }
 
-        // Trim and normalize the search query
-        query.Search ??= query.Search?.Trim().ToLower();
+        query.Search = query.Search?.Trim().ToLower();
 
-        // Retrieve the sort mappings for the DTO and entity
         SortMapping[] sortMappings = sortMappingProvider.GetMappings<RoutinesDto, Routine>();
 
-        // Build the query with filtering, sorting, and projection to DTO
         IQueryable<RoutinesDto> routinesQuery = dbContext.Routines
             .Where(r => query.Search == null ||
                         r.Name.ToLower().Contains(query.Search) ||
@@ -57,33 +51,24 @@ public sealed class RoutinesController(ApplicationDbContext dbContext, LinkServi
             .Where(r => query.Status == null || r.Status == query.Status)
             .ApplySort(query.Sort, sortMappings)
             .Select(RoutineQueries.ProjectToDto());
-        
-        // Get the total count of routines for pagination
-        int totalCount = await routinesQuery.CountAsync();
 
-        // Apply pagination to the query
-        List<RoutinesDto> routine = await routinesQuery
-            .Skip((query.Page - 1) * query.PageSize)
-            .Take(query.PageSize)
-            .ToListAsync();
+        PaginationResult<RoutinesDto> paginated = await PaginationResult<RoutinesDto>.CreateAsync(
+            routinesQuery, query.Page, query.PageSize, cancellationToken);
 
-        // Shape the data based on the requested fields
         var paginationResult = new PaginationResult<ExpandoObject>
         {
-            Items = dataShapingService.ShapeCollectionData(routine, query.Fields,
-                r => CreateLinkForRoutine(r.Id, query.Fields)),
-            Page = query.Page,
-            PageSize = query.PageSize,
-            TotalCount = totalCount,
+            Items = dataShapingService.ShapeCollectionData(
+                paginated.Items, query.Fields, r => CreateLinkForRoutine(r.Id, query.Fields)),
+            Page = paginated.Page,
+            PageSize = paginated.PageSize,
+            TotalCount = paginated.TotalCount
         };
-        paginationResult.Links =
-            CreateLinkForRoutines(query, paginationResult.HasNextPage, paginationResult.HasPreviousPage);
+        paginationResult.Links = CreateLinkForRoutines(query, paginationResult.HasNextPage, paginationResult.HasPreviousPage);
         return Ok(paginationResult);
     }
 
-    //GET api/<RoutineController>/5
     [HttpGet("{id}")]
-    public async Task<ActionResult<RoutineWithTagssDto>> GetRoutine(string id, string? fields, DataShapingService dataShapingService)
+    public async Task<ActionResult<RoutineWithTagssDto>> GetRoutine(string id, string? fields, CancellationToken cancellationToken)
     {
         if (!dataShapingService.Validate<RoutineWithTagssDto>(fields))
         {
@@ -91,65 +76,59 @@ public sealed class RoutinesController(ApplicationDbContext dbContext, LinkServi
                 statusCode: StatusCodes.Status400BadRequest,
                 detail: $"The provided data shaping fields aren't valid: '{fields}'");
         }
-        
-        
+
         RoutineWithTagssDto? routine = await dbContext.Routines
-            .Where(r => r.Id ==id)
+            .Where(r => r.Id == id)
             .Select(RoutineQueries.ProjectToDtoWithTags())
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(cancellationToken);
         if (routine is null)
         {
             return NotFound();
         }
-        
+
         ExpandoObject shapedRoutineDto = dataShapingService.ShapeData(routine, fields);
         List<LinkDto> links = CreateLinkForRoutine(id, fields);
-        shapedRoutineDto.TryAdd("links",links);
+        shapedRoutineDto.TryAdd("links", links);
         return Ok(shapedRoutineDto);
     }
 
-
-
-    // POST api/<RoutineController>
     [HttpPost]
-    public async Task<ActionResult<RoutinesDto>> CreateRoutine(CreateRoutineDto createRoutineDto, IValidator<CreateRoutineDto> validator)
+    public async Task<ActionResult<RoutinesDto>> CreateRoutine(CreateRoutineDto createRoutineDto, CancellationToken cancellationToken)
     {
-        
-        // Validate the CreateRoutineDto object and throw an exception if validation fails
-        await validator.ValidateAndThrowAsync(createRoutineDto);
-        
-        Routine routine = createRoutineDto.ToEntity(); // Convert DTO to Entity
+        await createRoutineValidator.ValidateAndThrowAsync(createRoutineDto, cancellationToken);
+
+        Routine routine = createRoutineDto.ToEntity();
         dbContext.Add(routine);
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(cancellationToken);
         RoutinesDto routinesDto = routine.ToDto();
-        routinesDto.Links = CreateLinkForRoutine(routine.Id, null);// Convert Entity to DTO
+        routinesDto.Links = CreateLinkForRoutine(routine.Id, null);
         return CreatedAtAction(nameof(GetRoutine), new { id = routine.Id }, routinesDto);
     }
-    
-    // PUT api/<RoutineController>/5
-    [HttpPut("{id}")]    
-    public async Task<ActionResult> UpdateRoute(string id, UpdateRoutineDto updateRoutineDto)
+
+    [HttpPut("{id}")]
+    public async Task<ActionResult> UpdateRoutine(string id, UpdateRoutineDto updateRoutineDto, CancellationToken cancellationToken)
     {
-        Routine? routine = await dbContext.Routines.FirstOrDefaultAsync(r => r.Id == id);
+        await updateRoutineValidator.ValidateAndThrowAsync(updateRoutineDto, cancellationToken);
+
+        Routine? routine = await dbContext.Routines.FirstOrDefaultAsync(r => r.Id == id, cancellationToken);
         if (routine is null)
         {
             return NotFound();
         }
         routine.UpdateFromDto(updateRoutineDto);
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(cancellationToken);
         return NoContent();
     }
-    
-    // PATCH api/<RoutineController>/5
+
     [HttpPatch("{id}")]
-    public async Task<ActionResult> PatchRoutine(string id, JsonPatchDocument<RoutinesDto> patchDocument)
+    public async Task<ActionResult> PatchRoutine(string id, JsonPatchDocument<RoutinesDto> patchDocument, CancellationToken cancellationToken)
     {
-        Routine? routine = await dbContext.Routines.FirstOrDefaultAsync(r => r.Id == id);
+        Routine? routine = await dbContext.Routines.FirstOrDefaultAsync(r => r.Id == id, cancellationToken);
         if (routine is null)
         {
             return NotFound();
         }
-        RoutinesDto routineDto = routine.ToDto(); // Convert Entity to DTO
+        RoutinesDto routineDto = routine.ToDto();
         patchDocument.ApplyTo(routineDto, ModelState);
         if (!TryValidateModel(routineDto))
         {
@@ -157,38 +136,33 @@ public sealed class RoutinesController(ApplicationDbContext dbContext, LinkServi
         }
         routine.Name = routineDto.Name;
         routine.Description = routineDto.Description;
-        routine.UpdatedAt = routineDto.UpdatedAt;
-        await dbContext.SaveChangesAsync();
+        routine.UpdatedAt = DateTime.UtcNow;
+        await dbContext.SaveChangesAsync(cancellationToken);
         return NoContent();
     }
-    
-    // DELETE api/<RoutineController>/5
+
     [HttpDelete("{id}")]
-    public async Task<ActionResult> DeleteRoutine (string id)
+    public async Task<ActionResult> DeleteRoutine(string id, CancellationToken cancellationToken)
     {
-        Routine? routine = await dbContext.Routines.FirstOrDefaultAsync(r => r.Id == id);
+        Routine? routine = await dbContext.Routines.FirstOrDefaultAsync(r => r.Id == id, cancellationToken);
         if (routine is null)
         {
             return NotFound();
         }
         dbContext.Remove(routine);
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(cancellationToken);
         return NoContent();
     }
-    
-    
-    
-    
-    
+
     private List<LinkDto> CreateLinkForRoutine(string id, string? fields)
     {
         List<LinkDto> links =
         [
-            linkService.Create(nameof(GetRoutine), "self", HttpMethods.Get, new { id,fields }),
+            linkService.Create(nameof(GetRoutine), "self", HttpMethods.Get, new { id, fields }),
             linkService.Create(nameof(GetRoutine), "update", HttpMethods.Put, new { id }),
             linkService.Create(nameof(GetRoutine), "patch-update", HttpMethods.Patch, new { id }),
             linkService.Create(nameof(GetRoutine), "delete", HttpMethods.Delete, new { id }),
-            linkService.Create(nameof(RoutineTagController.UpsertRoutineTags), "upsert-tags", HttpMethods.Put, 
+            linkService.Create(nameof(RoutineTagController.UpsertRoutineTags), "upsert-tags", HttpMethods.Put,
                 new { routineId = id }, RoutineTagController.Name)
         ];
         return links;
@@ -210,7 +184,7 @@ public sealed class RoutinesController(ApplicationDbContext dbContext, LinkServi
                 }),
                 linkService.Create(nameof(CreateRoutine), "create", HttpMethods.Post, null)
             ];
-        if(hasNextPage)
+        if (hasNextPage)
         {
             links.Add(linkService.Create(nameof(GetRoutines), "next-page", HttpMethods.Get, new
             {
@@ -236,7 +210,7 @@ public sealed class RoutinesController(ApplicationDbContext dbContext, LinkServi
                 fields = parameters.Fields
             }));
         }
-        
+
         return links;
     }
 }

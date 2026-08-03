@@ -2,91 +2,86 @@ using DevRoutine.Api.Database;
 using DevRoutine.Api.Dto.Tags;
 using DevRoutine.Api.Entities;
 using FluentValidation;
-using FluentValidation.Results;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace DevRoutine.Api.Controllers;
 
 [Route("tags")]
 [ApiController]
-public sealed class TagsController(ApplicationDbContext dbContext) : ControllerBase
+public sealed class TagController(
+    ApplicationDbContext dbContext,
+    IValidator<CreateTagDto> createTagValidator,
+    IValidator<UpdateTagDto> updateTagValidator) : ControllerBase
 {
-    //GET: api/<TagController>
     [HttpGet]
-    public async Task<ActionResult<TagsCollectionDto>> GetTags()
+    public async Task<ActionResult<TagsCollectionDto>> GetTags(CancellationToken cancellationToken)
     {
         List<TagDto> tags = await dbContext
             .Tags
             .Select(TagQueries.ProjectToDto())
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
-        var habitsCollectionDto = new TagsCollectionDto
+        var tagsCollectionDto = new TagsCollectionDto
         {
             Items = tags
         };
 
-        return Ok(habitsCollectionDto);
+        return Ok(tagsCollectionDto);
     }
 
-    // GET api/<TagController>/5
     [HttpGet("{id}")]
-    public async Task<ActionResult<TagDto>> GetTag(string id)
+    public async Task<ActionResult<TagDto>> GetTag(string id, CancellationToken cancellationToken)
     {
         TagDto? tagDto = await dbContext.Tags
             .Where(t => t.Id == id)
             .Select(TagQueries.ProjectToDto())
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(cancellationToken);
         if (tagDto is null)
         {
             return NotFound();
         }
         return Ok(tagDto);
     }
-    
-    
-    // POST api/<TagController>
+
     [HttpPost]
-    public async Task<ActionResult<TagDto>> CreateTag(
-        CreateTagDto createTagDto, IValidator<CreateTagDto> validator)
+    public async Task<ActionResult<TagDto>> CreateTag(CreateTagDto createTagDto, CancellationToken cancellationToken)
     {
-        await validator.ValidateAndThrowAsync(createTagDto);
-        
-        Tag tag = createTagDto.ToEntity(); // Convert DTO to Entity
+        await createTagValidator.ValidateAndThrowAsync(createTagDto, cancellationToken);
+
+        Tag tag = createTagDto.ToEntity();
         dbContext.Add(tag);
-        await dbContext.SaveChangesAsync();
-        TagDto tagDto = tag.ToDto(); // Convert Entity to DTO
+        await dbContext.SaveChangesAsync(cancellationToken);
+        TagDto tagDto = tag.ToDto();
         return CreatedAtAction(nameof(GetTag), new { id = tag.Id }, tagDto);
     }
 
-
-    // PUT api/<TagController>/5
-    [HttpPut("{id}")] 
-    public async Task<ActionResult<TagDto>> UpdateTag(string id, UpdateTagDto updateTagDto)
+    [HttpPut("{id}")]
+    public async Task<ActionResult<TagDto>> UpdateTag(string id, UpdateTagDto updateTagDto, CancellationToken cancellationToken)
     {
-        Tag? tag = await dbContext.Tags.FirstOrDefaultAsync(t => t.Id == id);
+        await updateTagValidator.ValidateAndThrowAsync(updateTagDto, cancellationToken);
+
+        Tag? tag = await dbContext.Tags.FirstOrDefaultAsync(t => t.Id == id, cancellationToken);
         if (tag is null)
         {
             return NotFound();
         }
         tag.UpdateFromDto(updateTagDto);
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(cancellationToken);
         return NoContent();
     }
-    
-    // DELETE api/<TagController>/5
+
     [HttpDelete("{id}")]
-    public async Task<ActionResult> DeleteTag(string id)
+    public async Task<ActionResult> DeleteTag(string id, CancellationToken cancellationToken)
     {
-        Tag? tag = await dbContext.Tags.FirstOrDefaultAsync(t => t.Id == id);
+        Tag? tag = await dbContext.Tags.FirstOrDefaultAsync(t => t.Id == id, cancellationToken);
         if (tag is null)
         {
             return NotFound();
         }
         dbContext.Tags.Remove(tag);
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(cancellationToken);
         return NoContent();
     }
 }

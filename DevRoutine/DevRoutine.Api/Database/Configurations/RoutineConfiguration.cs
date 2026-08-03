@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace DevRoutine.Api.Database.Configurations;
 
-public sealed class HabitConfiguration : IEntityTypeConfiguration<Routine>
+public sealed class RoutineConfiguration : IEntityTypeConfiguration<Routine>
 {
     public void Configure(EntityTypeBuilder<Routine> builder)
     {

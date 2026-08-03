@@ -3,7 +3,7 @@ using DevRoutine.Api.Entities;
 
 namespace DevRoutine.Api.Dto.Tags;
 
-public static class TagQueries
+internal static class TagQueries
 {
     public static Expression<Func<Tag, TagDto>> ProjectToDto()
     {

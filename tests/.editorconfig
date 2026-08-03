@@ -1,0 +1,10 @@
+root = true
+
+# C# files
+[*.cs]
+
+# Test method names commonly use underscores; don't flag them.
+dotnet_diagnostic.CA1707.severity = none
+
+# EF/test fixtures commonly construct entities without initializing every member.
+dotnet_diagnostic.CS8618.severity = none

@@ -33,38 +33,11 @@ internal static class RoutineMappings
         ]
     };
 
+    private static readonly Func<Routine, RoutinesDto> ToDtoProjection = RoutineQueries.ProjectToDto().Compile();
+
     public static RoutinesDto ToDto(this Routine routine)
     {
-        return new RoutinesDto
-        {
-            Id = routine.Id,
-            Name = routine.Name,
-            Description = routine.Description,
-            Type = routine.Type,
-            Frequency = new FrequencyDto
-            {
-                Type = routine.Frequency.Type,
-                TimesPerPeriod = routine.Frequency.TimesPerPeriod
-            },
-            Target = new TargetDto
-            {
-                Value = routine.Target.Value,
-                Unit = routine.Target.Unit
-            },
-            Status = routine.Status,
-            IsArchived = routine.IsArchived,
-            EndDate = routine.EndDate,
-            Milestone = routine.Milestone != null
-                ? new MilestoneDto
-                {
-                    Target = routine.Milestone.Target,
-                    Current = routine.Milestone.Current
-                }
-                : null,
-            CreatedAt = routine.CreatedAt,
-            UpdatedAt = routine.UpdatedAt,
-            LastCompletedAt = routine.LastCompletedAt
-        };
+        return ToDtoProjection(routine);
     }
     public static Routine ToEntity(this CreateRoutineDto dto)
     {

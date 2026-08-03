@@ -2,7 +2,7 @@ using DevRoutine.Api.Entities;
 
 namespace DevRoutine.Api.Dto.Routines;
 
-public sealed record CreateRoutineDto
+public sealed record CreateRoutineDto : IRoutineInput
 {
     public required string Name { get; init; }
     public string? Description { get; init; }

@@ -18,13 +18,14 @@ public sealed record PaginationResult<T> : ICollectionResponse<T>, ILinkResponse
     public static async Task<PaginationResult<T>> CreateAsync(
         IQueryable<T> query,
         int page,
-        int pageSize)
+        int pageSize,
+        CancellationToken cancellationToken = default)
     {
-        int totalCount = await query.CountAsync();
+        int totalCount = await query.CountAsync(cancellationToken);
         List<T> items = await query
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         return new PaginationResult<T>
         {

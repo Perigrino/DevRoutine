@@ -6,8 +6,15 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DevRoutine.Api", "DevRoutin
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{7611704C-C666-4E16-AEE2-532090B1B47B}"
 	ProjectSection(SolutionItems) = preProject
+		CONTRIBUTING.md = CONTRIBUTING.md
+		LICENSE = LICENSE
+		README.md = README.md
 		compose.yaml = compose.yaml
 	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{0AB3BF05-4346-4AA6-1389-037BE0695223}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DevRoutine.Api.Tests", "tests\DevRoutine.Api.Tests\DevRoutine.Api.Tests.csproj", "{A08623E5-6372-4585-9DAF-21105C675AB6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -19,8 +26,13 @@ Global
 		{8450D51C-2E39-446B-9613-A09AD558AEBD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8450D51C-2E39-446B-9613-A09AD558AEBD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8450D51C-2E39-446B-9613-A09AD558AEBD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A08623E5-6372-4585-9DAF-21105C675AB6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A08623E5-6372-4585-9DAF-21105C675AB6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A08623E5-6372-4585-9DAF-21105C675AB6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A08623E5-6372-4585-9DAF-21105C675AB6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{8450D51C-2E39-446B-9613-A09AD558AEBD} = {455CEF58-A524-4868-9CE7-DD73C9573171}
+		{A08623E5-6372-4585-9DAF-21105C675AB6} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 EndGlobal

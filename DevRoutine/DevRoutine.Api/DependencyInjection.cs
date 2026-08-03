@@ -48,7 +48,9 @@ public static class DependencyInjection
     {
         builder.Services.AddDbContext<ApplicationDbContext>(options =>
             options.UseNpgsql(builder.Configuration.GetConnectionString("Database"),
-                    npgsqlOptions => npgsqlOptions.MigrationsHistoryTable(HistoryRepository.DefaultTableName, Schemas.Application))
+                    npgsqlOptions => npgsqlOptions
+                        .MigrationsHistoryTable(HistoryRepository.DefaultTableName, Schemas.Application)
+                        .EnableRetryOnFailure())
                 .UseSnakeCaseNamingConvention());
 
         return builder;

@@ -2,7 +2,7 @@ using DevRoutine.Api.Entities;
 
 namespace DevRoutine.Api.Dto.Routines;
 
-public class UpdateRoutineDto
+public class UpdateRoutineDto : IRoutineInput
 {
     public required string Name { get; init; }
     public string? Description { get; init; }
