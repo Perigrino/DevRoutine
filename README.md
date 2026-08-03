@@ -13,7 +13,6 @@ Built on .NET 10 with ASP.NET Core, EF Core, and PostgreSQL.
 - **Data shaping** — request only the fields you need with `?fields=id,name`.
 - **Pagination** — paged responses with total counts, total pages, and previous/next-page links.
 - **HATEOAS** — every routine response carries discoverable links (self, update, patch, delete, upsert-tags).
-- **Problem Details** — RFC 7807 error responses via exception handlers for validation and server errors.
 - **OpenAPI** — automatic API documentation exposed in development.
 - **Observability** — OpenTelemetry traces, metrics, and logs exported over OTLP (works out of the box with the included Aspire dashboard and Seq).
 - **Resilient data access** — EF Core over PostgreSQL with snake_case naming conventions and retry-on-failure.
